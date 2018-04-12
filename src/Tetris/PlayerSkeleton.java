@@ -3,6 +3,7 @@ package Tetris;
 import java.util.*;
 import java.lang.*;
 
+import Tetris.Features.*;
 import Tetris.Helper.Tuple;
 import Tetris.Helper.Helper;
 
@@ -162,5 +163,110 @@ public class PlayerSkeleton {
 		}
 
 		return new Heuristic(childWeights);
+	}
+}
+
+class SimulatedAnnealing {
+
+	private static final int NUM_GAMES = 5;
+	private static final int NUM_ITERATIONS = 100;
+	private double score;
+	private int iteration;
+	private Random random;
+
+	public SimulatedAnnealing() {
+		score = 0;
+		iteration = 0;
+    	random = new Random();
+	}
+
+	public void run() {
+		score = PlayerSkeleton.runGameWithHeuristic(getHeuristic());
+		System.out.println(score);
+	}
+
+	public Heuristic getHeuristic() {
+		double initialTemperature = calculateInitialTemperature();
+		double temperature = initialTemperature;
+		Heuristic heuristic  = new Heuristic(25, 25, 25, 25);
+		while (true) {
+			if (temperature == 0) {
+				System.out.println("Cooled down! The result is obtained.");
+				return heuristic;
+			}
+
+			Heuristic newHeuristic = getNeighbourHeuristic(heuristic);
+			double averageScoreWithOldHeuristic = getAverageScore(heuristic, 5);
+			double averageScoreWithNewHeuristic = getAverageScore(newHeuristic, 5);
+			double improvementFromOlderHeuristic = averageScoreWithNewHeuristic - averageScoreWithOldHeuristic;
+			if (isAccepted(temperature, improvementFromOlderHeuristic)) {
+				heuristic = newHeuristic;
+			}
+
+			temperature = scheduleNewTemperature(initialTemperature, iteration);
+			iteration++;
+		}
+	}
+
+	public double calculateInitialTemperature() {
+		return 1000;
+	}
+
+	public Heuristic getNeighbourHeuristic(Heuristic heuristic) {
+		Heuristic newHeuristic = new Heuristic(heuristic.averageHeightWeight, heuristic.maxHeightWeight,
+				heuristic.numOfHolesWeight, heuristic.unevennessWeight);
+		double valueChange = random.nextDouble() * 100 - 50;
+		double sum = newHeuristic.averageHeightWeight + newHeuristic.maxHeightWeight + newHeuristic.numOfHolesWeight
+				+ newHeuristic.unevennessWeight + valueChange;
+		// The index indicates which weight is changed
+		int index = random.nextInt(4);
+		switch(index) {
+			case 0:
+				newHeuristic.averageHeightWeight += sum;
+				break;
+			case 1:
+				newHeuristic.maxHeightWeight += sum;
+				break;
+			case 2:
+				newHeuristic.numOfHolesWeight += sum;
+				break;
+			case 3:
+				newHeuristic.unevennessWeight += sum;
+		}
+		newHeuristic.averageHeightWeight = newHeuristic.averageHeightWeight * 100 / sum;
+		newHeuristic.maxHeightWeight = newHeuristic.maxHeightWeight * 100 / sum;
+		newHeuristic.numOfHolesWeight = newHeuristic.numOfHolesWeight * 100 / sum;
+		newHeuristic.unevennessWeight = newHeuristic.unevennessWeight * 100 / sum;
+
+		return heuristic;
+	}
+
+	public boolean isAccepted(double temperature, double improvementFromOlderHeuristic) {
+		double acceptanceProbability = getAcceptanceProbability(temperature, improvementFromOlderHeuristic);
+		if (acceptanceProbability >= random.nextDouble()) {
+			return true;
+		}
+		return false;
+	}
+
+	public double getAcceptanceProbability(double temperature, double improvementFromOlderHeuristic) {
+		if (improvementFromOlderHeuristic > 0) {
+			return 1.0;
+		} else {
+			return Math.exp((- improvementFromOlderHeuristic) / temperature);
+		}
+	}
+
+	public double scheduleNewTemperature(double initialTemperature, int iteration) {
+		double newTemperature = initialTemperature / (1 + Math.log(1 + iteration));
+		return newTemperature;
+	}
+
+	public double getAverageScore(Heuristic heuristic, int rounds) {
+		double sum = 0;
+		for (int i = 0; i < rounds; i++) {
+			sum += PlayerSkeleton.runGameWithHeuristic(heuristic);
+		}
+		return sum / rounds;
 	}
 }
