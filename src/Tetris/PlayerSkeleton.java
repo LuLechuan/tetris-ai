@@ -12,13 +12,39 @@ public class PlayerSkeleton {
 	public static TFrame frame = new TFrame(new State());
 
 	//implement this function to have a working system
-	public int pickMove(State s, int[][] legalMoves) {
-		Random rand = new Random();
-		return rand.nextInt(legalMoves.length);
+	public int pickMove(State s, int[][] legalMoves, Heuristic heuristic) {
+		double minValue = Double.MAX_VALUE;
+
+		int index = -1;
+
+		for (int i = 0; i < legalMoves.length; i++) {
+			NextState nextState = new NextState(s);
+
+			nextState.makeMove(i, legalMoves);
+
+			if (nextState.hasLost()) {
+				continue;
+			}
+
+			double val = heuristic.getValue(nextState);
+			if (val < minValue) {
+				minValue = val;
+				index = i;
+			}
+		}
+
+		// Every move leads to a loss.
+		if (index == -1) {
+			index = 0; // make a random move
+		}
+
+		return index;
 	}
 
 	public static void main(String[] args) {
-		geneticFunction();
+		//geneticFunction();
+		SimulatedAnnealing sa = new SimulatedAnnealing();
+		sa.run();
 	}
 
 	// Simulates the replacement of the population by its member's descendants
@@ -79,7 +105,7 @@ public class PlayerSkeleton {
 		frame.bindState(s);
 		PlayerSkeleton p = new PlayerSkeleton();
 		while(!s.hasLost()) {
-			s.makeMove(p.pickMove(s,s.legalMoves()));
+			s.makeMove(p.pickMove(s, s.legalMoves(), heuristic));
 			s.draw();
 			s.drawNext(0,0);
 			try {
@@ -88,7 +114,7 @@ public class PlayerSkeleton {
 				e.printStackTrace();
 			}
 		}
-//		System.out.println("You have completed "+s.getRowsCleared()+" rows.");
+		System.out.println("You have completed "+s.getRowsCleared()+" rows.");
 		return s.getRowsCleared();
 	}
 
@@ -188,9 +214,9 @@ class SimulatedAnnealing {
 	public Heuristic getHeuristic() {
 		double initialTemperature = calculateInitialTemperature();
 		double temperature = initialTemperature;
-		Heuristic heuristic  = new Heuristic(25, 25, 25, 25);
+		Heuristic heuristic  = new Heuristic(46.7528, 0.5959, 42.3235, 10.3277);
 		while (true) {
-			if (temperature == 0) {
+			if (temperature < 1) {
 				System.out.println("Cooled down! The result is obtained.");
 				return heuristic;
 			}
@@ -204,46 +230,50 @@ class SimulatedAnnealing {
 			}
 
 			temperature = scheduleNewTemperature(initialTemperature, iteration);
+			System.out.println(temperature);
+			System.out.println(heuristic.averageHeightWeight + " " + heuristic.maxHeightWeight + " " + heuristic.numOfHolesWeight + " " + heuristic.unevennessWeight);
 			iteration++;
 		}
 	}
 
 	public double calculateInitialTemperature() {
-		return 1000;
+		return 500;
 	}
 
 	public Heuristic getNeighbourHeuristic(Heuristic heuristic) {
 		Heuristic newHeuristic = new Heuristic(heuristic.averageHeightWeight, heuristic.maxHeightWeight,
 				heuristic.numOfHolesWeight, heuristic.unevennessWeight);
-		double valueChange = random.nextDouble() * 100 - 50;
+		double valueChange = random.nextDouble() * 100;
 		double sum = newHeuristic.averageHeightWeight + newHeuristic.maxHeightWeight + newHeuristic.numOfHolesWeight
 				+ newHeuristic.unevennessWeight + valueChange;
 		// The index indicates which weight is changed
 		int index = random.nextInt(4);
 		switch(index) {
 			case 0:
-				newHeuristic.averageHeightWeight += sum;
+				newHeuristic.averageHeightWeight += valueChange;
 				break;
 			case 1:
-				newHeuristic.maxHeightWeight += sum;
+				newHeuristic.maxHeightWeight += valueChange;
 				break;
 			case 2:
-				newHeuristic.numOfHolesWeight += sum;
+				newHeuristic.numOfHolesWeight += valueChange;
 				break;
 			case 3:
-				newHeuristic.unevennessWeight += sum;
+				newHeuristic.unevennessWeight += valueChange;
+				break;
 		}
 		newHeuristic.averageHeightWeight = newHeuristic.averageHeightWeight * 100 / sum;
 		newHeuristic.maxHeightWeight = newHeuristic.maxHeightWeight * 100 / sum;
 		newHeuristic.numOfHolesWeight = newHeuristic.numOfHolesWeight * 100 / sum;
 		newHeuristic.unevennessWeight = newHeuristic.unevennessWeight * 100 / sum;
 
-		return heuristic;
+		return newHeuristic;
 	}
 
 	public boolean isAccepted(double temperature, double improvementFromOlderHeuristic) {
 		double acceptanceProbability = getAcceptanceProbability(temperature, improvementFromOlderHeuristic);
 		if (acceptanceProbability >= random.nextDouble()) {
+			System.out.println("This is called");
 			return true;
 		}
 		return false;
@@ -253,7 +283,7 @@ class SimulatedAnnealing {
 		if (improvementFromOlderHeuristic > 0) {
 			return 1.0;
 		} else {
-			return Math.exp((- improvementFromOlderHeuristic) / temperature);
+			return Math.exp((improvementFromOlderHeuristic) / temperature);
 		}
 	}
 
@@ -267,6 +297,7 @@ class SimulatedAnnealing {
 		for (int i = 0; i < rounds; i++) {
 			sum += PlayerSkeleton.runGameWithHeuristic(heuristic);
 		}
+		System.out.println("Score: " + sum / rounds);
 		return sum / rounds;
 	}
 }

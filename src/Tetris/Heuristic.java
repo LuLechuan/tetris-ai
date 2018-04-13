@@ -57,4 +57,14 @@ public class Heuristic {
 
         return sum;
     }
+
+    public double getValue(NextState state) {
+        double sum = 0;
+        sum = averageHeightWeight * averageHeightFeature.getValue(state)
+                + maxHeightWeight * maxHeightFeature.getValue(state)
+                + numOfHolesWeight * numOfHolesFeature.getValue(state)
+                + unevennessWeight * unevennessFeature.getValue(state);
+
+        return sum;
+    }
 }

@@ -1,5 +1,6 @@
 package Tetris.Features;
 
+import Tetris.NextState;
 import Tetris.State;
 
 public class NumOfHolesFeature extends Feature {
@@ -20,4 +21,18 @@ public class NumOfHolesFeature extends Feature {
         return count;
     }
 
+    public double getValue(NextState state) {
+        int count = 0;
+        int[][] field = state.getField();
+        int[] heights = state.getTop();
+        for (int col = 0; col < 10; col++) {
+            for (int row = heights[col] - 1; row >= 0; row--) {
+                if (field[row][col] == 0) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
 }

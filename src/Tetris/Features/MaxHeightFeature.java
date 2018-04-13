@@ -1,5 +1,6 @@
 package Tetris.Features;
 
+import Tetris.NextState;
 import Tetris.State;
 
 public class MaxHeightFeature extends Feature {
@@ -17,4 +18,15 @@ public class MaxHeightFeature extends Feature {
         return max;
     }
 
+    public double getValue(NextState state) {
+        double max = 0;
+
+        int[] tops = state.getTop();
+
+        for (int i = 0; i < tops.length; i++) {
+            max = Math.max(max, tops[i]);
+        }
+
+        return max;
+    }
 }
